@@ -1,12 +1,19 @@
+
 {
-  "name": "okru-browser-streamer",
+  "name": "stream-bot-obs-test",
   "version": "1.0.0",
-  "description": "Automated Chrome Xvfb and FFmpeg RTMP streamer for OK.ru",
+  "description": "Testing OBS Studio Headless on GitHub Actions",
   "main": "stream.js",
   "scripts": {
     "start": "node stream.js"
   },
   "dependencies": {
-    "puppeteer": "^23.11.1"
+    "puppeteer": "^22.0.0",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
+    "puppeteer-screen-recorder": "^2.1.2",
+    "obs-websocket-js": "^5.0.3",
+    "@ghostery/adblocker-puppeteer": "^2.0.0",
+    "cross-fetch": "^4.0.0"
   }
 }
