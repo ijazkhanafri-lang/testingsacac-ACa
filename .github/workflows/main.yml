@@ -1,97 +1,155 @@
-name: OK.ru Live Stream
+name: 24/7 OK.ru Simple Stream Bot
+
+run-name: "OK.ru Live - Ch ${{ inputs.okru_stream_channel }} [${{ inputs.custom_duration || '24/7' }}]"
 
 on:
   workflow_dispatch:
     inputs:
-      stream_key_id:
-        description: 'Select OK.ru Stream Key ID (1, 1.1, 1.2, etc.)'
+      target_urls:
+        description: 'Comma-separated Target URLs (Server1, Server2, Server3)'
+        required: true
+        type: string
+        default: 'https://dadocric.st/player.php?id=starsp3&v=m'
+      okru_stream_channel:
+        description: 'OK.ru Broadcast Channel (e.g., 1, 1.1, 2, s1.1)'
+        required: true
+        type: string
+        default: '1'
+      server_selection:
+        description: 'Target Server Button on Page - Type "None" to skip'
+        required: true
+        type: string
+        default: 'None'
+      stream_quality:
+        description: 'Select Stream Quality'
         required: true
         type: choice
-        default: '1'
         options:
-          - '1'
-          - '1.1'
-          - '1.2'
-          - '1.3'
-          - '2'
-          - '2.1'
-          - '2.2'
-      stream_url:
-        description: 'Target Website / Player URL'
+          - 'Original (1080p Max)'
+          - '1080p'
+          - '720p'
+          - '480p'
+          - '360p'
+        default: '720p'
+      proxy_engine:
+        description: 'Network Proxy Engine'
         required: true
-        type: string
-        default: 'https://thedaddy.li/stream/stream-598.php'
-      duration_minutes:
-        description: 'Stream Duration in Minutes (e.g., 60, 120, 180, 240)'
+        type: choice
+        options:
+          - 'Cloudflare WARP (Recommended)'
+          - 'None (Direct GitHub IP)'
+        default: 'Cloudflare WARP (Recommended)'
+      enable_stream_audio:
+        description: 'Stream Audio (ON / OFF)'
         required: true
+        type: choice
+        options:
+          - 'ON'
+          - 'OFF'
+        default: 'ON'
+      custom_duration:
+        description: 'Stream Duration (e.g., 3h, 180m, 45m, or 24/7)'
+        required: false
         type: string
-        default: '240'
+        default: '24/7'
+
+permissions:
+  contents: write
+  actions: write
 
 jobs:
   stream:
     runs-on: ubuntu-latest
-    timeout-minutes: 355
+    timeout-minutes: 360
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - name: Checkout Repository (2026 v6)
+        uses: actions/checkout@v6
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - name: Setup Node.js 24 LTS (2026 v6)
+        uses: actions/setup-node@v6
         with:
-          node-version: '20'
+          node-version: '24'
 
-      - name: Install Google Chrome, Xvfb, PulseAudio, and FFmpeg
+      - name: Install System Dependencies, Openbox & OBS Studio
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            xvfb \
-            pulseaudio \
-            pulseaudio-utils \
-            ffmpeg \
-            dbus-x11 \
-            libasound2t64 \
-            libatk-bridge2.0-0 \
-            libatk1.0-0 \
-            libcups2 \
-            libdrm2 \
-            libgbm1 \
-            libgtk-3-0 \
-            libnspr4 \
-            libnss3 \
-            libxcomposite1 \
-            libxdamage1 \
-            libxrandr2 \
-            xdg-utils \
-            wget \
-            ca-certificates
-          wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
-          sudo apt-get install -y ./google-chrome-stable_current_amd64.deb
-          rm -f google-chrome-stable_current_amd64.deb
-          google-chrome --version
+          sudo apt-get install -y xvfb openbox pulseaudio dbus-x11 obs-studio xdotool wmctrl jq unzip curl wget
+          npm install
 
-      - name: Install Node dependencies
-        env:
-          PUPPETEER_SKIP_DOWNLOAD: 'true'
-        run: npm install
-
-      - name: Start virtual display, audio sink, and broadcast to OK.ru
-        env:
-          DISPLAY: ':99'
-          CHROME_PATH: '/usr/bin/google-chrome'
-          AUDIO_SOURCE: 'virtual_speaker.monitor'
-          RESOLUTION: '1280x720'
-          FPS: '30'
-          STREAM_KEY_ID: ${{ github.event.inputs.stream_key_id }}
-          STREAM_URL: ${{ github.event.inputs.stream_url }}
-          DURATION_MINUTES: ${{ github.event.inputs.duration_minutes }}
+      - name: Check Chrome and DRM Environment
         run: |
-          Xvfb :99 -screen 0 1280x720x24 -ac +extension GLX +render -noreset &
-          sleep 2
+          echo "=== Chrome ==="
+          google-chrome --version || true
 
-          pulseaudio --kill || true
+          echo "=== Chromium ==="
+          chromium --version || true
+
+          echo "=== Display ==="
+          echo "Runner OS: $RUNNER_OS"
+
+          echo "=== Installed Browser ==="
+          which google-chrome || true
+          which chromium || true
+
+      - name: Install & Connect Cloudflare WARP Proxy
+        if: github.event.inputs.proxy_engine == 'Cloudflare WARP (Recommended)'
+        continue-on-error: true
+        run: |
+          curl -fsSL https://pkg.cloudflareclient.com/pubkey.gpg | sudo gpg --yes --dearmor --output /usr/share/keyrings/cloudflare-warp-archive-keyring.gpg
+          echo "deb [signed-by=/usr/share/keyrings/cloudflare-warp-archive-keyring.gpg] https://pkg.cloudflareclient.com/ $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/cloudflare-client.list
+          sudo apt-get update && sudo apt-get install -y cloudflare-warp
+          warp-cli --accept-tos registration new || true
+          warp-cli --accept-tos mode proxy || true
+          warp-cli --accept-tos proxy port 40000 || true
+          warp-cli --accept-tos connect || true
+          sleep 5
+          echo "[+] Cloudflare WARP Connected on SOCKS5 127.0.0.1:40000"
+
+      - name: Fetch Latest 2026 uBlock Origin Lite (MV3)
+        continue-on-error: true
+        run: |
+          mkdir -p ublock-lite
+
+          # 1. Authenticated GitHub API call + Safe jq (.assets[]?) to prevent null error
+          LATEST_URL=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            https://api.github.com/repos/uBlockOrigin/uBOL-home/releases/latest \
+            | jq -r '.assets[]? | select(.name | endswith(".chromium.zip")) | .browser_download_url' | head -n 1)
+
+          # 2. Direct Fallback URL if API fails or returns empty/null
+          if [ -z "$LATEST_URL" ] || [ "$LATEST_URL" = "null" ]; then
+            echo "[!] GitHub API Null/Rate-Limited -> Using Direct Fallback URL..."
+            LATEST_URL="https://github.com/uBlockOrigin/uBOL-home/releases/download/2026.1110.1816/uBOLite_2026.1110.1816.chromium.zip"
+          fi
+
+          echo "[*] Downloading uBOLite from: $LATEST_URL"
+
+          # 3. Download with retry & extract without ever crashing the workflow
+          curl -fL --retry 3 --retry-delay 2 -s "$LATEST_URL" -o ublock-lite.zip && \
+          unzip -q -o ublock-lite.zip -d ublock-lite && \
+          rm -f ublock-lite.zip && \
+          echo "[+] Latest uBlock Origin Lite Extracted!" || echo "[!] Warning: uBOLite download failed, continuing stream without stopping job..."
+
+      - name: Launch Virtual Display & Stream Engine
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TARGET_URLS: ${{ github.event.inputs.target_urls }}
+          OKRU_STREAM_ID: ${{ github.event.inputs.okru_stream_channel }}
+          SERVER_SELECTION: ${{ github.event.inputs.server_selection }}
+          STREAM_QUALITY: ${{ github.event.inputs.stream_quality }}
+          PROXY_ENGINE: ${{ github.event.inputs.proxy_engine }}
+          ENABLE_STREAM_AUDIO: ${{ github.event.inputs.enable_stream_audio }}
+          CUSTOM_DURATION: ${{ github.event.inputs.custom_duration }}
+        run: |
           pulseaudio -D --exit-idle-time=-1
-          pactl load-module module-null-sink sink_name=virtual_speaker sink_properties=device.description=Virtual_Speaker
-          pactl set-default-sink virtual_speaker
+          pacmd load-module module-virtual-sink sink_name=v1
+          pacmd set-default-sink v1
+          pacmd set-default-source v1.monitor
 
-          npm start
+          # Match Xvfb screen size with selected stream quality
+          SCREEN_RES="1280x720x24"
+          if [[ "$STREAM_QUALITY" == *"1080p"* ]]; then SCREEN_RES="1920x1080x24"; fi
+          if [[ "$STREAM_QUALITY" == "480p" ]]; then SCREEN_RES="854x480x24"; fi
+          if [[ "$STREAM_QUALITY" == "360p" ]]; then SCREEN_RES="640x360x24"; fi
+
+          xvfb-run -s "-screen 0 $SCREEN_RES -ac -r -extension RANDR" bash -c "openbox & sleep 2 && node stream.js"
