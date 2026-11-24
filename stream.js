@@ -7,8 +7,8 @@ const OK_RU_RTMP_BASE = 'rtmp://vsu.okcdn.ru/input/';
 // Hardcoded Stream Keys mapped to selector IDs (1, 1.1, 1.2, etc.)
 // Replace the placeholder values with your actual OK.ru stream keys
 const STREAM_KEYS = {
-  '1': 'PASTE_OK_RU_STREAM_KEY_1_HERE',
-  '1.1': 'PASTE_OK_RU_STREAM_KEY_1_1_HERE',
+  '1': '15254238731883_15281627925099_najspfkgne',
+  '1.1': '15254260751979_15281671637611_2plrcfqzze',
   '1.2': 'PASTE_OK_RU_STREAM_KEY_1_2_HERE',
   '1.3': 'PASTE_OK_RU_STREAM_KEY_1_3_HERE',
   '2': 'PASTE_OK_RU_STREAM_KEY_2_HERE',
