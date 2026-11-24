@@ -1,0 +1,12 @@
+{
+  "name": "okru-browser-streamer",
+  "version": "1.0.0",
+  "description": "Automated Chrome Xvfb and FFmpeg RTMP streamer for OK.ru",
+  "main": "stream.js",
+  "scripts": {
+    "start": "node stream.js"
+  },
+  "dependencies": {
+    "puppeteer": "^23.11.1"
+  }
+}
